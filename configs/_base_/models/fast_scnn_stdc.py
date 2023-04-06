@@ -1,7 +1,7 @@
 _base_ = 'fast_scnn.py'
+norm_cfg = dict(type='BN', requires_grad=True)
 model = dict(
     type='EncoderDecoder',
-    data_preprocessor=data_preprocessor,
     backbone=dict(
         _delete_=True,
         type = 'STDCContextPathNet',
@@ -14,6 +14,10 @@ model = dict(
             num_convs=4,
             norm_cfg=norm_cfg,
             act_cfg=dict(type='ReLU'),
-            with_final_conv=False),
+            with_final_conv=True),
+        last_in_channels=(1024, 512),
+        out_channels=128,
+        ffm_cfg=dict(in_channels=384, out_channels=256, scale_factor=4),
     )
 )
+
