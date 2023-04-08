@@ -11,12 +11,12 @@ model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     pretrained=None,
-    backbone=dict(type='mmcls.RepVGG', arch='B3', out_indices=(1, 2, 3)),
+    backbone=dict(type='mmcls.RepVGG', arch='B3', out_indices=(0 , 1, 2, 3)),
     decode_head=dict(
         type='FCNHead',
-        in_channels=2560,
-        in_index=-1,
-        channels=192,
+        in_channels=192,
+        in_index=-0,
+        channels=8,
         num_convs=1,
         concat_input=False,
         dropout_ratio=0.1,
@@ -28,23 +28,11 @@ model = dict(
     auxiliary_head=[
         dict(
             type='FCNHead',
-            in_channels=768,
-            channels=4,
-            num_convs=2,
-            num_classes=19,
-            in_index=-2,
-            norm_cfg=norm_cfg,
-            concat_input=False,
-            align_corners=False,
-            loss_decode=dict(
-                type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
-        dict(
-            type='FCNHead',
             in_channels=384,
-            channels=4,
+            channels=8,
             num_convs=2,
             num_classes=19,
-            in_index=-3,
+            in_index=1,
             norm_cfg=norm_cfg,
             concat_input=False,
             align_corners=False,
@@ -52,8 +40,20 @@ model = dict(
                 type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
         dict(
             type='FCNHead',
-            in_channels=256,
-            channels=64,
+            in_channels=768,
+            channels=8,
+            num_convs=2,
+            num_classes=19,
+            in_index=2,
+            norm_cfg=norm_cfg,
+            concat_input=False,
+            align_corners=False,
+            loss_decode=dict(
+                type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+        dict(
+            type='FCNHead',
+            in_channels=2560,
+            channels=8,
             num_convs=2,
             num_classes=19,
             in_index=3,
@@ -62,18 +62,7 @@ model = dict(
             align_corners=False,
             loss_decode=dict(
                 type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
-        dict(
-            type='FCNHead',
-            in_channels=128,
-            channels=1024,
-            num_convs=2,
-            num_classes=19,
-            in_index=4,
-            norm_cfg=norm_cfg,
-            concat_input=False,
-            align_corners=False,
-            loss_decode=dict(
-                type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+
     ],
     # model training and testing settings
     train_cfg=dict(),
