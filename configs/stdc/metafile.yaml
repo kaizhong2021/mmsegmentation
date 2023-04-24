@@ -19,7 +19,7 @@ Models:
     Metrics:
       mIoU: 71.82
       mIoU(ms+flip): 73.89
-  Config: configs/stdc/stdc1_4xb12-80k_cityscapes-512x1024.py
+  Config: configs/stdc/stdc2_4xb12-80k_cityscapes-512x1024.py
   Metadata:
     Training Data: Cityscapes
     Batch Size: 48
