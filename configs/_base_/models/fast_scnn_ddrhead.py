@@ -53,7 +53,7 @@ model = dict(
     auxiliary_head=[
         dict(
             type='FCNHead',
-            in_channels=128,
+            in_channels=64,
             channels=32,
             num_convs=1,
             num_classes=19,
@@ -65,11 +65,11 @@ model = dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=0.4)),
         dict(
             type='FCNHead',
-            in_channels=128,
+            in_channels=64,
             channels=32,
             num_convs=1,
             num_classes=19,
-            in_index=-3,
+            in_index=-2,
             norm_cfg=norm_cfg,
             concat_input=False,
             align_corners=False,

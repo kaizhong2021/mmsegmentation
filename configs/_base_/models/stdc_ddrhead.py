@@ -28,7 +28,7 @@ model = dict(
     decode_head=dict(
         type='DDRHead',
         in_channels=64 * 2,
-        channels=64,
+        channels=128,
         dropout_ratio=0.,
         num_classes=19,
         align_corners=False,
@@ -76,7 +76,7 @@ model = dict(
                 type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
         dict(
             type='STDCHead',
-            in_channels=256,
+            in_channels=128,
             channels=64,
             num_convs=1,
             num_classes=2,
