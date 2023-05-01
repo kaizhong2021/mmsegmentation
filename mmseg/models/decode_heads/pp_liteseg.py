@@ -1,10 +1,10 @@
 import torch.nn as nn
-from mmseg.models.decode_heads.decode_head import BaseDecodeHead
+# from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 from mmseg.registry import MODELS
 
 
 @MODELS.register_module()
-class PP_LiteSeg_DecodeHead(BaseDecodeHead):
+class PP_LiteSeg_DecodeHead(nn.Module):
     def __init__(self, in_channels, num_classes):
         super(PP_LiteSeg_DecodeHead, self).__init__()
 
