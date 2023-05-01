@@ -28,7 +28,6 @@ model = dict(
     decode_head=dict(
         type='PP_LiteSeg_DecodeHead',
         in_channels=256,
-        channels=256,
         num_classes=19),
     auxiliary_head=[
         dict(
