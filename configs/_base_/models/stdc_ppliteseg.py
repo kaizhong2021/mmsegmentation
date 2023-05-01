@@ -26,7 +26,7 @@ model = dict(
         out_channels=128,
         ffm_cfg=dict(in_channels=384, out_channels=256, scale_factor=4)),
     decode_head=dict(
-        type='PP_LiteSeg_DecodeHead',
+        type='PP_Lite_DecodeHead',
         in_channels=256,
         num_classes=19,
         align_corners=True),
