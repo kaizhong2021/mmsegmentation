@@ -1,28 +1,28 @@
+import torch
 import torch.nn as nn
-# from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 from mmseg.registry import MODELS
 
-
 @MODELS.register_module()
-class PP_LiteSeg_DecodeHead(nn.Module):
-    def __init__(self, in_channels, num_classes):
-        super(PP_LiteSeg_DecodeHead, self).__init__()
+class PP_Lite_DecodeHead(nn.Module):
+    def __init__(self, in_channels, num_classes, align_corners=True):
+        super().__init__()
+        self.align_corners = align_corners
+        self.conv1 = nn.Conv2d(in_channels, 256, kernel_size=3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(256)
+        self.relu1 = nn.ReLU(inplace=True)
+        self.dropout1 = nn.Dropout2d(0.1)
 
-        self.conv1 = nn.Conv2d(in_channels, in_channels // 4, kernel_size=3, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(in_channels // 4)
-        self.relu = nn.ReLU(inplace=True)
-
-        self.conv2 = nn.Conv2d(in_channels // 4, num_classes, kernel_size=1, stride=1)
-
-        self.upsample = nn.Upsample(scale_factor=8, mode='bilinear', align_corners=True)
+        self.conv2 = nn.Conv2d(256, num_classes, kernel_size=1, stride=1)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
-        x = self.relu(x)
-
+        x = self.relu1(x)
+        x = self.dropout1(x)
         x = self.conv2(x)
 
-        x = self.upsample(x)
-
+        if self.align_corners:
+            x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
+        else:
+            x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
         return x
