@@ -27,9 +27,10 @@ model = dict(
         ffm_cfg=dict(in_channels=384, out_channels=256, scale_factor=4)),
     decode_head=dict(
         type='LPSNet',
-        in_channels=256,
+        in_channels=655,
         depths=[1, 3, 3, 10, 10],
-        channel=160,
+        channels_eb=[8, 24, 64, 160, 160],
+        channels=129,
         scale_ratios=[1, 0.25],
         num_classes=19),
     auxiliary_head=[

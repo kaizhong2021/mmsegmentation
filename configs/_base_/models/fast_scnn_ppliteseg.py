@@ -24,14 +24,13 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False),
     decode_head=dict(
-        type='PPLiteSegHead',
-        backbone_out_chs=[32, (64,), (128,)],
-        arm_out_chs=128,
-        cm_bin_sizes=19,
-        cm_out_ch=128,
-        arm_type='UAFM_SpAtten',
-        resize_mode='bilinear',
-    ),
+        type='PP_Lite_DecodeHead',
+        in_channels=128,
+        num_classes=19,
+        feature_strides=[8, 16, 32, 64],
+        channels=256,
+        loss_decode=dict(
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
     auxiliary_head=[
         dict(
             type='FCNHead',
