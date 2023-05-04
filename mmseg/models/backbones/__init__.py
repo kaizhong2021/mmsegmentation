@@ -22,7 +22,6 @@ from .timm_backbone import TIMMBackbone
 from .twins import PCPVT, SVT
 from .unet import UNet
 from .vit import VisionTransformer
-from .fasternet import FasterNet,fasternet_s,fasternet_m,fasternet_l
 from .ddrnet import DDRNet
 
 __all__ = [
