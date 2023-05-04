@@ -11,12 +11,7 @@ model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='fasternet_s',
-        style='pytorch',
-        init_cfg=dict(
-            type='Pretrained',
-            checkpoint='https://github.com/JierunChen/FasterNet/releases/download/v1.0/fasternet_s-epoch.299-val_acc1.81.2840.pth',
-            ),
+        type='FasterNet',
     ),
     decode_head=dict(
         type='FCNHead',
