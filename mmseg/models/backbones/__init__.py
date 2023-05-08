@@ -23,7 +23,7 @@ from .twins import PCPVT, SVT
 from .unet import UNet
 from .vit import VisionTransformer
 from .ddrnet import DDRNet
-from .fasternet import FasterNet
+from .fasternet import FasterNet,FasterNetT0,FasterNetT2,FasterNetS,FasterNetM,FasterNetT1,FasterNetL
 
 __all__ = [
     'ResNet', 'ResNetV1c', 'ResNetV1d', 'ResNeXt', 'HRNet', 'FastSCNN',
@@ -31,5 +31,5 @@ __all__ = [
     'VisionTransformer', 'SwinTransformer', 'MixVisionTransformer',
     'BiSeNetV1', 'BiSeNetV2', 'ICNet', 'TIMMBackbone', 'ERFNet', 'PCPVT',
     'SVT', 'STDCNet', 'STDCContextPathNet', 'BEiT', 'MAE', 'PIDNet', 'MSCAN',
-    'DDRNet','FasterNet'
+    'DDRNet','FasterNet','FasterNetM','FasterNetT2','FasterNetL','FasterNetS','FasterNetT0','FasterNetT1'
 ]
