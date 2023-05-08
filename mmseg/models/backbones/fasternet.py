@@ -11,6 +11,7 @@ import torch.nn as nn
 from torch import Tensor
 from timm.models.layers import DropPath
 from mmseg.registry import MODELS
+from mmengine.model import BaseModule
 
 class PConv2d(nn.Module):
     def __init__(self,
@@ -133,7 +134,7 @@ class FasterNetBlock(nn.Module):
         return x + self.drop_path(y)
 
 @MODELS.register_module()
-class FasterNet(nn.Module):
+class FasterNet(BaseModule):
     def __init__(self,
                  in_channels=3,
                  out_channels=256,
