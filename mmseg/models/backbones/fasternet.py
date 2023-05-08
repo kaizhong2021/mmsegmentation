@@ -137,7 +137,7 @@ class FasterNetBlock(nn.Module):
 class FasterNet(BaseModule):
     def __init__(self,
                  in_channels=3,
-                 out_channels=torch.tensor(256),
+                 out_channels=1000,
                  last_channels=1280,
                  inner_channels: list = [40, 80, 160, 320],
                  blocks: list = [1, 2, 8, 2],
