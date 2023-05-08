@@ -11,8 +11,11 @@ model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='FasterNetL',
-
+        type='FasterNet',
+        inner_channels=[192, 384, 768, 1536],
+        blocks=[3, 4, 18, 3],
+        act='ReLU',
+        drop_path=0.3
    ),
     decode_head=dict(
         type='FCNHead',

@@ -64,9 +64,6 @@ class ConvBNLayer(nn.Module):
                  bias: bool = False,
                  act: str = 'ReLU'):
         super(ConvBNLayer, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-
         assert act in ('ReLU', 'GELU')
         self.conv = nn.Conv2d(in_channels,
                               out_channels,
@@ -140,8 +137,8 @@ class FasterNetBlock(nn.Module):
 class FasterNet(BaseModule):
     def __init__(self,
                  in_channels=3,
-                 out_channels=256,
-                 last_channels=512,
+                 out_channels=torch.tensor(256),
+                 last_channels=1280,
                  inner_channels: list = [40, 80, 160, 320],
                  blocks: list = [1, 2, 8, 2],
                  bias=False,
