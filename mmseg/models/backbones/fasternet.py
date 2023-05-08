@@ -64,6 +64,9 @@ class ConvBNLayer(nn.Module):
                  bias: bool = False,
                  act: str = 'ReLU'):
         super(ConvBNLayer, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
         assert act in ('ReLU', 'GELU')
         self.conv = nn.Conv2d(in_channels,
                               out_channels,
