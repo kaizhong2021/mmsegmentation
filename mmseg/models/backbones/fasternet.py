@@ -136,8 +136,8 @@ class FasterNetBlock(nn.Module):
 class FasterNet(nn.Module):
     def __init__(self,
                  in_channels=3,
-                 out_channels=1000,
-                 last_channels=1280,
+                 out_channels=256,
+                 last_channels=512,
                  inner_channels: list = [40, 80, 160, 320],
                  blocks: list = [1, 2, 8, 2],
                  bias=False,
