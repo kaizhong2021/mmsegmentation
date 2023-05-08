@@ -12,6 +12,7 @@ model = dict(
     data_preprocessor=data_preprocessor,
     backbone=dict(
         type='FasterNet',
+        in_channels=3,
     ),
     decode_head=dict(
         type='FCNHead',
