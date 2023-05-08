@@ -1,11 +1,18 @@
-import torch
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+import torch, yaml
 import torch.nn as nn
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from functools import partial
 from typing import List
 from torch import Tensor
 import copy
+import os
+import numpy as np
 from mmseg.registry import MODELS
+from mmengine.model import BaseModule
+
+__all__ = ['fasternet_t0', 'fasternet_t1', 'fasternet_t2', 'fasternet_s', 'fasternet_m', 'fasternet_l']
 
 
 class Partial_conv3(nn.Module):
@@ -105,128 +112,249 @@ class BasicStage(nn.Module):
                  drop_path,
                  layer_scale_init_value,
                  norm_layer,
-                 act,
-                 pconv_fw_type='slicing'
+                 act_layer,
+                 pconv_fw_type
                  ):
         super().__init__()
 
-        self.blocks = nn.ModuleList([
+        blocks_list = [
             MLPBlock(
                 dim=dim,
                 n_div=n_div,
                 mlp_ratio=mlp_ratio,
-                drop_path=drop_path * i / depth,
+                drop_path=drop_path[i],
                 layer_scale_init_value=layer_scale_init_value,
-                act_layer=act,
                 norm_layer=norm_layer,
+                act_layer=act_layer,
                 pconv_fw_type=pconv_fw_type
             )
             for i in range(depth)
-        ])
+        ]
+
+        self.blocks = nn.Sequential(*blocks_list)
 
     def forward(self, x: Tensor) -> Tensor:
-        for block in self.blocks:
-            x = block(x)
+        x = self.blocks(x)
+        return x
+
+
+class PatchEmbed(nn.Module):
+
+    def __init__(self, patch_size, patch_stride, in_chans, embed_dim, norm_layer):
+        super().__init__()
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_stride, bias=False)
+        if norm_layer is not None:
+            self.norm = norm_layer(embed_dim)
+        else:
+            self.norm = nn.Identity()
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = self.norm(self.proj(x))
+        return x
+
+
+class PatchMerging(nn.Module):
+
+    def __init__(self, patch_size2, patch_stride2, dim, norm_layer):
+        super().__init__()
+        self.reduction = nn.Conv2d(dim, 2 * dim, kernel_size=patch_size2, stride=patch_stride2, bias=False)
+        if norm_layer is not None:
+            self.norm = norm_layer(2 * dim)
+        else:
+            self.norm = nn.Identity()
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = self.norm(self.reduction(x))
         return x
 
 
 @MODELS.register_module()
-class FasterNet(nn.Module):
+class FasterNet(BaseModule):
     def __init__(self,
-                 image_size=224,
-                 in_channels=3,
-                 patch_size=16,
+                 in_chans=3,
                  num_classes=1000,
-                 depth=[2, 2, 6, 2],
-                 dim=[64, 128, 320, 512],
-                 n_divs=[4, 4, 8, 8],
-                 mlp_ratios=[4, 4, 4, 4],
-                 drop_path=0.1,
+                 embed_dim=96,
+                 depths=(1, 2, 8, 2),
+                 mlp_ratio=2.,
+                 n_div=4,
+                 patch_size=4,
+                 patch_stride=4,
+                 patch_size2=2,  # for subsequent layers
+                 patch_stride2=2,
+                 patch_norm=True,
+                 feature_dim=1280,
+                 drop_path_rate=0.1,
                  layer_scale_init_value=0,
-                 norm_layer=nn.LayerNorm,
-                 act_layer=nn.GELU,
-                 pconv_fw_type='slicing'
-                 ):
+                 norm_layer='BN',
+                 act_layer='RELU',
+                 init_cfg=None,
+                 pretrained=None,
+                 pconv_fw_type='split_cat',
+                 **kwargs):
         super().__init__()
 
-        assert image_size % patch_size == 0, 'image size must be divisible by patch size'
-        num_patches = (image_size // patch_size) ** 2
-        patch_dim = in_channels * patch_size ** 2
+        if norm_layer == 'BN':
+            norm_layer = nn.BatchNorm2d
+        else:
+            raise NotImplementedError
 
-        self.patch_embed = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=dim[0],
-            kernel_size=patch_size,
-            stride=patch_size,
-            bias=False
-        )
-        self.patch_to_embedding = nn.Linear(patch_dim, dim[0])
+        if act_layer == 'GELU':
+            act_layer = nn.GELU
+        elif act_layer == 'RELU':
+            act_layer = partial(nn.ReLU, inplace=True)
+        else:
+            raise NotImplementedError
 
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, dim[0]))
-        trunc_normal_(self.pos_embed, std=0.02)
+        self.num_stages = len(depths)
+        self.embed_dim = embed_dim
+        self.patch_norm = patch_norm
+        self.num_features = int(embed_dim * 2 ** (self.num_stages - 1))
+        self.mlp_ratio = mlp_ratio
+        self.depths = depths
 
-        self.stage1 = BasicStage(
-            dim=dim[0],
-            depth=depth[0],
-            n_div=n_divs[0],
-            mlp_ratio=mlp_ratios[0],
-            drop_path=drop_path,
-            layer_scale_init_value=layer_scale_init_value,
-            norm_layer=norm_layer,
-            act=act_layer,
-            pconv_fw_type=pconv_fw_type
-        )
-
-        self.stage2 = BasicStage(
-            dim=dim[1],
-            depth=depth[1],
-            n_div=n_divs[1],
-            mlp_ratio=mlp_ratios[1],
-            drop_path=drop_path,
-            layer_scale_init_value=layer_scale_init_value,
-            norm_layer=norm_layer,
-            act=act_layer,
-            pconv_fw_type=pconv_fw_type
+        # split image into non-overlapping patches
+        self.patch_embed = PatchEmbed(
+            patch_size=patch_size,
+            patch_stride=patch_stride,
+            in_chans=in_chans,
+            embed_dim=embed_dim,
+            norm_layer=norm_layer if self.patch_norm else None
         )
 
-        self.stage3 = BasicStage(
-            dim=dim[2],
-            depth=depth[2],
-            n_div=n_divs[2],
-            mlp_ratio=mlp_ratios[2],
-            drop_path=drop_path,
-            layer_scale_init_value=layer_scale_init_value,
-            norm_layer=norm_layer,
-            act=act_layer,
-            pconv_fw_type=pconv_fw_type
-        )
+        # stochastic depth decay rule
+        dpr = [x.item()
+               for x in torch.linspace(0, drop_path_rate, sum(depths))]
 
-        self.stage4 = BasicStage(
-            dim=dim[3],
-            depth=depth[3],
-            n_div=n_divs[3],
-            mlp_ratio=mlp_ratios[3],
-            drop_path=drop_path,
-            layer_scale_init_value=layer_scale_init_value,
-            norm_layer=norm_layer,
-            act=act_layer,
-            pconv_fw_type=pconv_fw_type
-        )
+        # build layers
+        stages_list = []
+        for i_stage in range(self.num_stages):
+            stage = BasicStage(dim=int(embed_dim * 2 ** i_stage),
+                               n_div=n_div,
+                               depth=depths[i_stage],
+                               mlp_ratio=self.mlp_ratio,
+                               drop_path=dpr[sum(depths[:i_stage]):sum(depths[:i_stage + 1])],
+                               layer_scale_init_value=layer_scale_init_value,
+                               norm_layer=norm_layer,
+                               act_layer=act_layer,
+                               pconv_fw_type=pconv_fw_type
+                               )
+            stages_list.append(stage)
 
-        self.norm = norm_layer(dim[-1])
-        self.head = nn.Linear(dim[-1], num_classes)
+            # patch merging layer
+            if i_stage < self.num_stages - 1:
+                stages_list.append(
+                    PatchMerging(patch_size2=patch_size2,
+                                 patch_stride2=patch_stride2,
+                                 dim=int(embed_dim * 2 ** i_stage),
+                                 norm_layer=norm_layer)
+                )
 
-    def forward(self, x):
+        self.stages = nn.Sequential(*stages_list)
+
+        # add a norm layer for each output
+        self.out_indices = [0, 2, 4, 6]
+        for i_emb, i_layer in enumerate(self.out_indices):
+            if i_emb == 0 and os.environ.get('FORK_LAST3', None):
+                raise NotImplementedError
+            else:
+                layer = norm_layer(int(embed_dim * 2 ** i_emb))
+            layer_name = f'norm{i_layer}'
+            self.add_module(layer_name, layer)
+
+        self.channel = [i.size(1) for i in self.forward(torch.randn(1, 3, 640, 640))]
+
+    def forward(self, x: Tensor) -> Tensor:
+        # output the features of four stages for dense prediction
         x = self.patch_embed(x)
-        x = x.flatten(2).transpose(1, 2)
-        x = self.patch_to_embedding(x)
-        x = x + self.pos_embed
-        x = self.stage1(x)
-        x = self.stage2(x)
-        x = self.stage3(x)
-        x = self.stage4(x)
+        outs = []
+        for idx, stage in enumerate(self.stages):
+            x = stage(x)
+            if idx in self.out_indices:
+                norm_layer = getattr(self, f'norm{idx}')
+                x_out = norm_layer(x)
+                outs.append(x_out)
+        return outs
 
-        x = self.norm(x[:, 0])
-        x = self.head(x)
 
-        return x
+def update_weight(model_dict, weight_dict):
+    idx, temp_dict = 0, {}
+    for k, v in weight_dict.items():
+        if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
+            temp_dict[k] = v
+            idx += 1
+    model_dict.update(temp_dict)
+    print(f'loading weights... {idx}/{len(model_dict)} items')
+    return model_dict
+
+
+@MODELS.register_module()
+def fasternet_t0(weights=None, cfg='models/faster_cfg/fasternet_t0.yaml'):
+    with open(cfg) as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    model = FasterNet(**cfg)
+    if weights is not None:
+        pretrain_weight = torch.load(weights, map_location='cpu')
+        model.load_state_dict(update_weight(model.state_dict(), pretrain_weight))
+    return model
+
+
+@MODELS.register_module()
+def fasternet_t1(weights=None, cfg='models/faster_cfg/fasternet_t1.yaml'):
+    with open(cfg) as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    model = FasterNet(**cfg)
+    if weights is not None:
+        pretrain_weight = torch.load(weights, map_location='cpu')
+        model.load_state_dict(update_weight(model.state_dict(), pretrain_weight))
+    return model
+
+
+@MODELS.register_module()
+def fasternet_t2(weights=None, cfg='models/faster_cfg/fasternet_t2.yaml'):
+    with open(cfg) as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    model = FasterNet(**cfg)
+    if weights is not None:
+        pretrain_weight = torch.load(weights, map_location='cpu')
+        model.load_state_dict(update_weight(model.state_dict(), pretrain_weight))
+    return model
+
+@MODELS.register_module()
+def fasternet_s(weights=None, cfg='models/faster_cfg/fasternet_s.yaml'):
+    with open(cfg) as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    model = FasterNet(**cfg)
+    if weights is not None:
+        pretrain_weight = torch.load(weights, map_location='cpu')
+        model.load_state_dict(update_weight(model.state_dict(), pretrain_weight))
+    return model
+
+@MODELS.register_module()
+def fasternet_m(weights=None, cfg='models/faster_cfg/fasternet_m.yaml'):
+    with open(cfg) as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    model = FasterNet(**cfg)
+    if weights is not None:
+        pretrain_weight = torch.load(weights, map_location='cpu')
+        model.load_state_dict(update_weight(model.state_dict(), pretrain_weight))
+    return model
+
+@MODELS.register_module()
+def fasternet_l(weights=None, cfg='models/faster_cfg/fasternet_l.yaml'):
+    with open(cfg) as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    model = FasterNet(**cfg)
+    if weights is not None:
+        pretrain_weight = torch.load(weights, map_location='cpu')
+        model.load_state_dict(update_weight(model.state_dict(), pretrain_weight))
+    return model
+
+
+if __name__ == '__main__':
+    import yaml
+
+    model = fasternet_t0(weights='fasternet_t0-epoch.281-val_acc1.71.9180.pth', cfg='cfg/fasternet_t0.yaml')
+    print(model.channel)
+    inputs = torch.randn((1, 3, 640, 640))
+    for i in model(inputs):
+        print(i.size())
