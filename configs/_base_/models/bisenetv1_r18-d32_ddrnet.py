@@ -13,7 +13,7 @@ model = dict(
     backbone=dict(
         type='DDRNet',
         in_channels=3,
-        channels=128,
+        channels=64,
         ppm_channels=256,
         norm_cfg=norm_cfg,
         align_corners=False,
@@ -22,21 +22,21 @@ model = dict(
             checkpoint='pretrained/ddrnet23_in1k_mmseg.pth')),
     decode_head=dict(
         type='FCNHead',
-        in_channels=256,
+        in_channels=128,
         in_index=0,
         channels=256,
         num_convs=1,
-        concat_input=False,
+        concat_input=True,
         dropout_ratio=0.1,
         num_classes=19,
         norm_cfg=norm_cfg,
-        align_corners=False,
+        align_corners=True,
         loss_decode=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
     auxiliary_head=[
         dict(
             type='FCNHead',
-            in_channels=512,
+            in_channels=256,
             channels=64,
             num_convs=1,
             num_classes=19,
@@ -48,7 +48,7 @@ model = dict(
                 type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
         dict(
             type='FCNHead',
-            in_channels=512,
+            in_channels=256,
             channels=64,
             num_convs=1,
             num_classes=19,

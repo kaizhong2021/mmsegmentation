@@ -190,6 +190,7 @@ class DDRNet(BaseModule):
             align_corners=self.align_corners)
         if self.training:
             temp_context = x_s.clone()
+        x_k = x_s.clone()
 
         # stage4
         x_c = self.context_branch_layers[1](self.relu(x_c))
@@ -213,4 +214,4 @@ class DDRNet(BaseModule):
             align_corners=self.align_corners)
 
 
-        return (temp_context, x_s + x_c) if self.training else (x_s + x_c).unsqueeze(0)
+        return (temp_context, x_s + x_c) if self.training else (x_k, x_s + x_c)
