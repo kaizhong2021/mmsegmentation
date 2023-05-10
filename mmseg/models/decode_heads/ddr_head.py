@@ -41,7 +41,7 @@ class DDRHead(BaseDecodeHead):
             **kwargs)
 
         self.head = self._make_base_head(self.in_channels, self.channels)
-        self.aux_head = self._make_base_head(self.in_channels // 2,
+        self.aux_head = self._make_base_head(self.in_channels ,
                                              self.channels)
         self.aux_cls_seg = nn.Conv2d(
             self.channels, self.out_channels, kernel_size=1)
@@ -60,15 +60,15 @@ class DDRHead(BaseDecodeHead):
             inputs: Union[Tensor,
                           Tuple[Tensor]]) -> Union[Tensor, Tuple[Tensor]]:
         if self.training:
-            c3_feat, c5_feat = inputs
+            c3_feat, c5_feat, c6_feat = inputs
             x_c = self.head(c5_feat)
             x_c = self.cls_seg(x_c)
-            x_s = self.aux_head(c3_feat)
+            x_s = self.aux_head(c5_feat)
             x_s = self.aux_cls_seg(x_s)
 
             return x_c, x_s
         else:
-            x_c = self.head(inputs)
+            x_c = self.head(inputs[1])
             x_c = self.cls_seg(x_c)
             return x_c
 
