@@ -3,6 +3,8 @@ _base_ = [
     '../_base_/datasets/cityscapes_1024x1024.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_160k.py'
 ]
+
+model_wrapper_cfg = dict(find_unused_parameters=True)
 crop_size = (1024, 1024)
 data_preprocessor = dict(size=crop_size)
 model = dict(data_preprocessor=data_preprocessor)
@@ -19,6 +21,6 @@ param_scheduler = [
 ]
 optimizer = dict(type='SGD', lr=0.025, momentum=0.9, weight_decay=0.0005)
 optim_wrapper = dict(type='OptimWrapper', optimizer=optimizer)
-train_dataloader = dict(batch_size=4, num_workers=4)
+train_dataloader = dict(batch_size=8, num_workers=4)
 val_dataloader = dict(batch_size=1, num_workers=4)
 test_dataloader = val_dataloader

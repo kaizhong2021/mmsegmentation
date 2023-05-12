@@ -6,7 +6,7 @@ crop_size = (512, 1024)
 data_preprocessor = dict(size=crop_size)
 model = dict(data_preprocessor=data_preprocessor)
 # Re-config the data sampler.
-train_dataloader = dict(batch_size=8, num_workers=2)
+train_dataloader = dict(batch_size=16, num_workers=2)
 val_dataloader = dict(batch_size=1, num_workers=4)
 test_dataloader = val_dataloader
 
