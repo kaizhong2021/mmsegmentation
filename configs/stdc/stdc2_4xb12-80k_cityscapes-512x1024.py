@@ -1,2 +1,7 @@
 _base_ = './stdc1_4xb12-80k_cityscapes-512x1024.py'
-model = dict(backbone=dict(backbone_cfg=dict(stdc_type='STDCNet2')))
+custom_imports = dict(imports=['mmpretrain.models'], allow_failed_imports=False)
+model = dict(backbone=dict(
+        type='RepVGG',
+        arch='D2se',
+        out_indices=(3, ),
+    ))

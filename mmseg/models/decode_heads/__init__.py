@@ -35,6 +35,7 @@ from .uper_head import UPerHead
 from .ddr_head import DDRHead
 from .pp_liteseg import  PP_Lite_DecodeHead
 from .lspnet import LPSNet
+from .ppmobileseg_head import PPMobileSegHead
 
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
@@ -44,5 +45,5 @@ __all__ = [
     'SETRMLAHead', 'DPTHead', 'SETRMLAHead', 'SegmenterMaskTransformerHead',
     'SegformerHead', 'ISAHead', 'STDCHead', 'IterativeDecodeHead',
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
-    'LightHamHead', 'PIDHead', 'DDRHead', 'PP_Lite_DecodeHead','LPSNet'
+    'LightHamHead', 'PIDHead', 'DDRHead', 'PP_Lite_DecodeHead','LPSNet','PPMobileSegHead'
 ]

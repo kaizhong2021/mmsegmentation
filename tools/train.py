@@ -84,6 +84,8 @@ def main():
             cfg.optim_wrapper.type = 'AmpOptimWrapper'
             cfg.optim_wrapper.loss_scale = 'dynamic'
 
+
+
     # resume training
     cfg.resume = args.resume
 
